@@ -45,6 +45,7 @@
     "mongodb": "3.3.2",
     "node-rsa": "1.0.5",
     "parse": "2.7.0",
+    "parse-server-postmark-adapter": "git://github.com/TomKremer/parse-server-postmark-adapter.git#2.3.6",
     "pg-promise": "9.1.2",
     "pluralize": "^8.0.0",
     "redis": "2.8.0",
