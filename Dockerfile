@@ -2,12 +2,7 @@
 FROM node:lts-alpine as build
 
 RUN apk update; \
-  apk add git; \
-  apk add python; \
-  apk add make; \
-  apk add g++;
-RUN npm install -g node-gyp
-RUN npm install node-pre-gyp -g
+  apk add git;
 WORKDIR /tmp
 COPY package*.json ./
 RUN npm ci
@@ -18,11 +13,7 @@ RUN npm run build
 FROM node:lts-alpine as release
 
 RUN apk update; \
-  apk add git; \
-  apk add python;
-
-RUN npm install -g node-gyp
-RUN npm install node-pre-gyp -g
+  apk add git;
 
 VOLUME /parse-server/cloud /parse-server/config
 
