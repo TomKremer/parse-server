@@ -3069,57 +3069,65 @@ describe('ParseGraphQLServer', () => {
 
           describe_only_db('mongo')('read preferences', () => {
             it('should read from primary by default', async () => {
-              await prepareData();
+              try {
+                await prepareData();
 
-              await parseGraphQLServer.parseGraphQLSchema.databaseController.schemaCache.clear();
+                await parseGraphQLServer.parseGraphQLSchema.databaseController.schemaCache.clear();
 
-              const databaseAdapter =
-                parseServer.config.databaseController.adapter;
-              spyOn(
-                databaseAdapter.database.serverConfig,
-                'cursor'
-              ).and.callThrough();
+                const databaseAdapter =
+                  parseServer.config.databaseController.adapter;
+                spyOn(
+                  databaseAdapter.database.serverConfig,
+                  'cursor'
+                ).and.callThrough();
 
-              await apolloClient.query({
-                query: gql`
-                  query GetSomeObject($id: ID!) {
-                    graphQLClass(id: $id) {
-                      pointerToUser {
-                        username
+                await apolloClient.query({
+                  query: gql`
+                    query GetSomeObject($id: ID!) {
+                      graphQLClass(id: $id) {
+                        pointerToUser {
+                          username
+                        }
                       }
                     }
-                  }
-                `,
-                variables: {
-                  id: object3.id,
-                },
-                context: {
-                  headers: {
-                    'X-Parse-Session-Token': user1.getSessionToken(),
+                  `,
+                  variables: {
+                    id: object3.id,
                   },
-                },
-              });
-
-              let foundGraphQLClassReadPreference = false;
-              let foundUserClassReadPreference = false;
-              databaseAdapter.database.serverConfig.cursor.calls
-                .all()
-                .forEach(call => {
-                  if (call.args[0].ns.collection.indexOf('GraphQLClass') >= 0) {
-                    foundGraphQLClassReadPreference = true;
-                    expect(call.args[0].options.readPreference.mode).toBe(
-                      ReadPreference.PRIMARY
-                    );
-                  } else if (call.args[0].ns.collection.indexOf('_User') >= 0) {
-                    foundUserClassReadPreference = true;
-                    expect(call.args[0].options.readPreference.mode).toBe(
-                      ReadPreference.PRIMARY
-                    );
-                  }
+                  context: {
+                    headers: {
+                      'X-Parse-Session-Token': user1.getSessionToken(),
+                    },
+                  },
                 });
 
-              expect(foundGraphQLClassReadPreference).toBe(true);
-              expect(foundUserClassReadPreference).toBe(true);
+                let foundGraphQLClassReadPreference = false;
+                let foundUserClassReadPreference = false;
+                databaseAdapter.database.serverConfig.cursor.calls
+                  .all()
+                  .forEach(call => {
+                    if (
+                      call.args[0].ns.collection.indexOf('GraphQLClass') >= 0
+                    ) {
+                      foundGraphQLClassReadPreference = true;
+                      expect(call.args[0].options.readPreference.mode).toBe(
+                        ReadPreference.PRIMARY
+                      );
+                    } else if (
+                      call.args[0].ns.collection.indexOf('_User') >= 0
+                    ) {
+                      foundUserClassReadPreference = true;
+                      expect(call.args[0].options.readPreference.mode).toBe(
+                        ReadPreference.PRIMARY
+                      );
+                    }
+                  });
+
+                expect(foundGraphQLClassReadPreference).toBe(true);
+                expect(foundUserClassReadPreference).toBe(true);
+              } catch (e) {
+                handleError(e);
+              }
             });
 
             it('should support readPreference argument', async () => {
@@ -3137,7 +3145,10 @@ describe('ParseGraphQLServer', () => {
               await apolloClient.query({
                 query: gql`
                   query GetSomeObject($id: ID!) {
-                    graphQLClass(id: $id, readPreference: SECONDARY) {
+                    graphQLClass(
+                      id: $id
+                      options: { readPreference: SECONDARY }
+                    ) {
                       pointerToUser {
                         username
                       }
@@ -3193,8 +3204,10 @@ describe('ParseGraphQLServer', () => {
                   query GetSomeObject($id: ID!) {
                     graphQLClass(
                       id: $id
-                      readPreference: SECONDARY
-                      includeReadPreference: NEAREST
+                      options: {
+                        readPreference: SECONDARY
+                        includeReadPreference: NEAREST
+                      }
                     ) {
                       pointerToUser {
                         username
@@ -3904,7 +3917,9 @@ describe('ParseGraphQLServer', () => {
               await apolloClient.query({
                 query: gql`
                   query FindSomeObjects {
-                    find: graphQLClasses(readPreference: SECONDARY) {
+                    find: graphQLClasses(
+                      options: { readPreference: SECONDARY }
+                    ) {
                       results {
                         pointerToUser {
                           username
@@ -3958,8 +3973,10 @@ describe('ParseGraphQLServer', () => {
                 query: gql`
                   query FindSomeObjects {
                     graphQLClasses(
-                      readPreference: SECONDARY
-                      includeReadPreference: NEAREST
+                      options: {
+                        readPreference: SECONDARY
+                        includeReadPreference: NEAREST
+                      }
                     ) {
                       results {
                         pointerToUser {
@@ -4016,8 +4033,10 @@ describe('ParseGraphQLServer', () => {
                     query FindSomeObjects($where: GraphQLClassWhereInput) {
                       find: graphQLClasses(
                         where: $where
-                        readPreference: SECONDARY
-                        subqueryReadPreference: NEAREST
+                        options: {
+                          readPreference: SECONDARY
+                          subqueryReadPreference: NEAREST
+                        }
                       ) {
                         results {
                           id
@@ -5177,19 +5196,23 @@ describe('ParseGraphQLServer', () => {
 
       describe('Functions Mutations', () => {
         it('can be called', async () => {
-          Parse.Cloud.define('hello', async () => {
-            return 'Hello world!';
-          });
+          try {
+            Parse.Cloud.define('hello', async () => {
+              return 'Hello world!';
+            });
 
-          const result = await apolloClient.mutate({
-            mutation: gql`
-              mutation CallFunction {
-                callCloudCode(functionName: "hello")
-              }
-            `,
-          });
+            const result = await apolloClient.mutate({
+              mutation: gql`
+                mutation CallFunction {
+                  callCloudCode(functionName: hello)
+                }
+              `,
+            });
 
-          expect(result.data.callCloudCode).toEqual('Hello world!');
+            expect(result.data.callCloudCode).toEqual('Hello world!');
+          } catch (e) {
+            handleError(e);
+          }
         });
 
         it('can throw errors', async () => {
@@ -5201,7 +5224,7 @@ describe('ParseGraphQLServer', () => {
             await apolloClient.mutate({
               mutation: gql`
                 mutation CallFunction {
-                  callCloudCode(functionName: "hello")
+                  callCloudCode(functionName: hello)
                 }
               `,
             });
@@ -5302,13 +5325,101 @@ describe('ParseGraphQLServer', () => {
           apolloClient.mutate({
             mutation: gql`
               mutation CallFunction($params: Object) {
-                callCloudCode(functionName: "hello", params: $params)
+                callCloudCode(functionName: hello, params: $params)
               }
             `,
             variables: {
               params,
             },
           });
+        });
+
+        it('should list all functions in the enum type', async () => {
+          try {
+            Parse.Cloud.define('a', async () => {
+              return 'hello a';
+            });
+
+            Parse.Cloud.define('b', async () => {
+              return 'hello b';
+            });
+
+            Parse.Cloud.define('_underscored', async () => {
+              return 'hello _underscored';
+            });
+
+            Parse.Cloud.define('contains1Number', async () => {
+              return 'hello contains1Number';
+            });
+
+            const functionEnum = (await apolloClient.query({
+              query: gql`
+                query ObjectType {
+                  __type(name: "CloudCodeFunction") {
+                    kind
+                    enumValues {
+                      name
+                    }
+                  }
+                }
+              `,
+            })).data['__type'];
+            expect(functionEnum.kind).toEqual('ENUM');
+            expect(
+              functionEnum.enumValues.map(value => value.name).sort()
+            ).toEqual(['_underscored', 'a', 'b', 'contains1Number']);
+          } catch (e) {
+            handleError(e);
+          }
+        });
+
+        it('should warn functions not matching GraphQL allowed names', async () => {
+          try {
+            spyOn(
+              parseGraphQLServer.parseGraphQLSchema.log,
+              'warn'
+            ).and.callThrough();
+
+            Parse.Cloud.define('a', async () => {
+              return 'hello a';
+            });
+
+            Parse.Cloud.define('double-barrelled', async () => {
+              return 'hello b';
+            });
+
+            Parse.Cloud.define('1NumberInTheBeggning', async () => {
+              return 'hello contains1Number';
+            });
+
+            const functionEnum = (await apolloClient.query({
+              query: gql`
+                query ObjectType {
+                  __type(name: "CloudCodeFunction") {
+                    kind
+                    enumValues {
+                      name
+                    }
+                  }
+                }
+              `,
+            })).data['__type'];
+            expect(functionEnum.kind).toEqual('ENUM');
+            expect(
+              functionEnum.enumValues.map(value => value.name).sort()
+            ).toEqual(['a']);
+            expect(
+              parseGraphQLServer.parseGraphQLSchema.log.warn.calls
+                .all()
+                .map(call => call.args[0])
+                .sort()
+            ).toEqual([
+              'Function 1NumberInTheBeggning could not be added to the auto schema because GraphQL names must match /^[_a-zA-Z][_a-zA-Z0-9]*$/.',
+              'Function double-barrelled could not be added to the auto schema because GraphQL names must match /^[_a-zA-Z][_a-zA-Z0-9]*$/.',
+            ]);
+          } catch (e) {
+            handleError(e);
+          }
         });
       });
 

@@ -363,9 +363,7 @@ describe_only_db('mongo')('Parse.Polygon testing', () => {
       .then(resp => {
         return request({
           method: 'POST',
-          url: `http://localhost:8378/1/classes/TestObject/${
-            resp.data.objectId
-          }`,
+          url: `http://localhost:8378/1/classes/TestObject/${resp.data.objectId}`,
           body: { _method: 'GET' },
           headers: defaultHeaders,
         });
