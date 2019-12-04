@@ -1,5 +1,5 @@
 # Build stage
-FROM node:10.13.0-alpine as build
+FROM node:latest-alpine as build
 
 RUN apk update; \
   apk add git; \
@@ -15,11 +15,14 @@ COPY . .
 RUN npm run build
 
 # Release stage
-FROM node:10.13.0-alpine as release
+FROM node:latest-alpine as release
 
 RUN apk update; \
   apk add git; \
   apk add python;
+
+RUN npm install -g node-gyp
+RUN npm install node-pre-gyp -g
 
 VOLUME /parse-server/cloud /parse-server/config
 
