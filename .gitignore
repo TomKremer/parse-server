@@ -58,3 +58,4 @@ lib/
 /files
 
 configuration.json
+/docker-compose.yml
